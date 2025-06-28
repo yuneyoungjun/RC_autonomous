@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from pid_controller import PID  # ✅ PID 클래스 가져오기
 from parameters import (
     LANE_IMG_WIDTH, LANE_IMG_HEIGHT,
     LANE_WARP_SRC_POINTS, LANE_WARP_DST_POINTS,
@@ -8,7 +9,8 @@ from parameters import (
     LANE_MORPHOLOGY_KERNEL_SIZE,
     LANE_SLIDING_WINDOWS_COUNT, LANE_SLIDING_WINDOW_MARGIN, LANE_SLIDING_WINDOW_MIN_PIXELS
 )
-
+from pid_controller import PID  # ✅ PID 클래스 가져오기
+from parameters import *
 class LaneDetector:
     def __init__(self):
         self.prev_l_pos = 0
@@ -20,6 +22,12 @@ class LaneDetector:
 
         self.M = cv2.getPerspectiveTransform(LANE_WARP_SRC_POINTS, LANE_WARP_DST_POINTS)
         self.Minv = cv2.getPerspectiveTransform(LANE_WARP_DST_POINTS, LANE_WARP_SRC_POINTS)
+        self.pid = PID(kp=LANE_PID_KP, ki=LANE_PID_KI, kd=LANE_PID_KD)
+
+
+
+
+
 
     def preprocess(self, img):
         blur = cv2.GaussianBlur(img, LANE_GAUSSIAN_BLUR_KERNEL_SIZE, 0)
@@ -43,8 +51,22 @@ class LaneDetector:
         processed = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel)
         return processed
 
+
+
+
+
+
+
+
     def warp_image(self, binary):
         return cv2.warpPerspective(binary, self.M, (self.Width, self.Height))
+
+
+
+
+
+
+
 
     def detect_lane_pixels(self, binary_warped):
         histogram = np.sum(binary_warped[binary_warped.shape[0]//2:, :], axis=0)
@@ -95,6 +117,18 @@ class LaneDetector:
 
         return leftx, lefty, rightx, righty
 
+
+
+
+
+
+
+
+
+
+
+
+
     def fit_polynomial(self, leftx, lefty, rightx, righty):
         try:
             left_fit = np.polyfit(lefty, leftx, 2)
@@ -107,6 +141,18 @@ class LaneDetector:
             self.prev_l_detected = False
             self.prev_r_detected = False
         return left_fit, right_fit
+
+
+
+
+
+
+
+
+
+
+
+
 
     def draw_lane(self, original_img, binary_img, left_fit, right_fit):
         ploty = np.linspace(0, binary_img.shape[0]-1, binary_img.shape[0])
@@ -124,6 +170,19 @@ class LaneDetector:
         newwarp = cv2.warpPerspective(color_warp, self.Minv, (self.Width, self.Height))
         result = cv2.addWeighted(original_img, 1, newwarp, 0.3, 0)
         return result, int((left_fitx[-1] + right_fitx[-1]) // 2)
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def detect_lane_color_position(self, img):
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -144,6 +203,20 @@ class LaneDetector:
 
         return right_yellow > left_yellow
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def get_steering_angle(self, frame):
         proc = self.preprocess(frame)
         warped = self.warp_image(proc)
@@ -155,7 +228,10 @@ class LaneDetector:
         car_center = self.Width // 2
         error = car_center - lane_center
 
-        angle = int(error * 0.2)
+        # ✅ PID 제어기 사용
+        angle = int(self.pid.pid_control(error, dt=0.1))  # 0.1초 주기로 동작한다고 가정
+        angle = np.clip(angle, -50, 50)
+
         speed = max(10, 30 - abs(angle) // 3)
 
         self.prev_l_pos = left_fit[2]

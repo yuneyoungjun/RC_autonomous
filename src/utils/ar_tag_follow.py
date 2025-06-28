@@ -3,6 +3,9 @@ import cv2
 import math
 import apriltag
 
+from utils.pid_controller import PID
+from parameters import AR_PID_KP, AR_PID_KI, AR_PID_KD
+
 class ARTagFollow:
     def __init__(self):
         self.detector = apriltag.Detector()
@@ -14,6 +17,9 @@ class ARTagFollow:
         ])
         self.retry_count = 0
         self.fix_speed = 30
+
+        # ✅ PID 제어기 (조향 angle 계산용)
+        self.steer_pid = PID(kp=AR_PID_KP, ki=AR_PID_KI, kd=AR_PID_KD)
 
     def detect_tags(self, image):
         """
@@ -72,20 +78,14 @@ class ARTagFollow:
             else:
                 return 0, 0, False  # 정지
 
-        # AR 태그 감지 시 주행 제어
         self.retry_count = 0
         distance = math.sqrt(z_pos ** 2 + x_pos ** 2)
 
-        if distance > 100:
-            x_pos += 300 / (distance + 1)
-            angle = int(x_pos * 1)
-        elif distance > 50:
-            x_pos += max(50 / (distance + 1), 5)
-            angle = int(x_pos * 2)
-        else:
-            x_pos += 40
-            angle = int(x_pos * 3)
-            if distance < 20:
-                return 0, 0, True  # 가까우면 도착으로 판단
+        # ✅ PID 조향 적용
+        angle = int(self.steer_pid.pid_control(x_pos, dt=0.1))
+        angle = np.clip(angle, -50, 50)  # 최대 조향 제한
+
+        if distance < 20:
+            return 0, 0, True
 
         return angle, self.fix_speed, False

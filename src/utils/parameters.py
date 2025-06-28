@@ -9,18 +9,43 @@ import numpy as np
 MODE_INITIAL_LANE_FOLLOW = 0
 MODE_STOPLINE_HALT = 1
 MODE_LEBACON_AVOIDANCE = 2
-MODE_FINAL_LANE_FOLLOW = 3
-MODE_MISSION_COMPLETE = 4
-MODE_AR_DRIVE = 5  # ✅ 추가
-MODE_AR_FOLLOW = 6
+MODE_AR_DRIVE = 3
+MODE_AR_FOLLOW = 4
+MODE_LANE_CHANGE = 5
+MODE_FINAL_LANE_FOLLOW = 6
+MODE_MISSION_COMPLETE = 7
+
 MODE_MISSION_COMPLETE = 99   # 미션 완료 모드: 모든 미션을 성공적으로 마치고 정지합니다.
 
 
 
+##PID gains
+#################차선 주행
+LANE_PID_KP = 0.4
+LANE_PID_KI = 0.0
+LANE_PID_KD = 0.1
+
+#################AR테그 추종
+AR_PID_KP = 0.3
+AR_PID_KI = 0.0
+AR_PID_KD = 0.1
+#########################
+
+
+################레바콘 주행
+SONIC_PID_KP = 1.2
+SONIC_PID_KI = 0.02
+SONIC_PID_KD = 0.4
+###############################################
 
 
 
 
+##Filters gain
+FILTER_QUEUE_LENGTH = 5       # 큐 길이
+FILTER_IIR_ALPHA = 0.2        # IIR 필터 계수
+FILTER_OUTLIER_THRESHOLD = 30 # 이상치 판단 기준 (절댓값 차이 또는 2*표준편차 중 큰 값)
+#########################
 
 
 

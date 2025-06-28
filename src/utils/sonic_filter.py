@@ -4,7 +4,10 @@ import rospy
 from std_msgs.msg import Int32MultiArray, Bool
 from ultrasonic_polar_plotter import UltrasonicPolarPlotter
 from filters import FilterWithQueue
-
+from pid_controller import PID  # 기존 구현한 PID 클래스
+from parameters import (
+    SONIC_PID_KP, SONIC_PID_KI, SONIC_PID_KD
+)
 class SonicDriver:
     def __init__(self):
         self.ultra_msg = None
@@ -19,7 +22,7 @@ class SonicDriver:
         # 필터 인스턴스 생성
         self.left_filter = FilterWithQueue(queue_len=5, alpha=0.2, threshold=30)
         self.right_filter = FilterWithQueue(queue_len=5, alpha=0.2, threshold=30)
-
+        self.steering_pid = PID(SONIC_PID_KP, SONIC_PID_KI, SONIC_PID_KD)
         self.polar_plotter = UltrasonicPolarPlotter()
         rospy.on_shutdown(self.shutdown_hook)
 
@@ -56,24 +59,32 @@ class SonicDriver:
         left = self.filtered_left
         right = self.filtered_right
 
-        ok = 0
-        if 0 < left < 45 and left < right:
-            ok = 1
-        elif 0 < right < 45 and left > right:
-            ok = 2
+        # 장애물 판단
+        direction = 0  # 0: 없음, 1: 좌측 회피, 2: 우측 회피
+        target_distance = 45
 
-        transition_to_next_stage = self.april_tag_detected
-
-        if ok == 1:
-            speed = min(left, 20)
-            angle = 100 - 1.0 * left
-            return angle, speed, transition_to_next_stage
-        elif ok == 2:
-            speed = min(right, 20)
-            angle = 100 - 1.0 * right
-            return -angle, speed, transition_to_next_stage
+        if 0 < left < target_distance and left < right:
+            direction = 1
+            cte = target_distance - left
+        elif 0 < right < target_distance and left > right:
+            direction = 2
+            cte = target_distance - right
         else:
-            return 0, 30, transition_to_next_stage
+            return 0, 30, self.april_tag_detected  # 기본 전진
+
+        # PID 계산
+        steering_correction = self.steering_pid.pid_control(cte)
+        speed_correction = self.speed_pid.pid_control(cte)
+
+        # 방향에 따라 조정
+        if direction == 1:
+            angle = +steering_correction
+        else:
+            angle = -steering_correction
+
+        speed = max(10, min(30, 100 - abs(speed_correction)))
+
+        return angle, speed, self.april_tag_detected
 
     def shutdown_hook(self):
         self.polar_plotter.close_plot()

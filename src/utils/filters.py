@@ -3,8 +3,15 @@
 import numpy as np
 from collections import deque
 
+# ✅ 파라미터 임포트
+from parameters import (
+    FILTER_QUEUE_LENGTH,
+    FILTER_IIR_ALPHA,
+    FILTER_OUTLIER_THRESHOLD
+)
+
 class FilterWithQueue:
-    def __init__(self, queue_len=5, alpha=0.2, threshold=30):
+    def __init__(self, queue_len=FILTER_QUEUE_LENGTH, alpha=FILTER_IIR_ALPHA, threshold=FILTER_OUTLIER_THRESHOLD):
         self.queue_len = queue_len
         self.alpha = alpha
         self.threshold = threshold
