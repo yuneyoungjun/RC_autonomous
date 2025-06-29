@@ -9,7 +9,7 @@
    <!-- Ultrasonic sensor node -->
   <include file="$(find xycar_ultrasonic)/launch/xycar_ultrasonic.launch" />
 
-  <node name="driver" pkg="my_traffic" type="main.py" output="screen"/>
+  <node name="driver" pkg="main" type="main.py" output="screen"/>
   
 </launch>
 
