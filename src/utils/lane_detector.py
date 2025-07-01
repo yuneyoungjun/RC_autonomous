@@ -234,3 +234,13 @@ class LaneDetector:
         yellow_right = self.detect_lane_color_position(frame)
 
         return angle, speed, yellow_right
+    
+
+
+
+    
+
+
+
+
+

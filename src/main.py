@@ -16,8 +16,8 @@ from utils.camera_handler import CameraHandler
 from utils.parameters import *  # ✅ MODE_* 상수들
 from utils.ar_tag_handler import ARTagHandler
 from utils.ar_tag_follow import ARTagFollow
-
-
+# from utils.sonic_filter import SonicDriver
+from utils.db_scan_rebacon import HullClusterDriver 
 
 if __name__ == '__main__':
     rospy.init_node('main_controller')
@@ -31,7 +31,7 @@ if __name__ == '__main__':
     ar_follow = ARTagFollow()
     lane_changer=LaneChanger()
     ar_handler = ARTagHandler()
-
+    hull_cluster_driver = HullClusterDriver() 
 
 
 
@@ -84,21 +84,41 @@ if __name__ == '__main__':
 
 
 
+        # elif current_mode == MODE_LEBACON_AVOIDANCE:
+        #     sonic_driver = SonicDriver()
+        #     rospy.loginfo("현재 모드: MODE_LEBACON_AVOIDANCE (레바콘 회피 중)")
+        #     leba_angle, leba_speed, lebacon_section_complete = sonic_driver.get_drive_values()
+        #     controller.drive(leba_angle, leba_speed)
+        #     rospy.loginfo(f"레바콘 회피: Angle={leba_angle}, Speed={leba_speed}")
+        #     if lebacon_section_complete:
+        #         rospy.loginfo("✅ 레바콘 구간 완료 → MODE_AR_DRIVE")
+        #         controller.drive(0, 15)
+        #         rospy.sleep(0.5)
+        #         current_mode = MODE_AR_DRIVE
+
+
+
         elif current_mode == MODE_LEBACON_AVOIDANCE:
-            sonic_driver = SonicDriver()
-            rospy.loginfo("현재 모드: MODE_LEBACON_AVOIDANCE (레바콘 회피 중)")
-            leba_angle, leba_speed, lebacon_section_complete = sonic_driver.get_drive_values()
-            controller.drive(leba_angle, leba_speed)
-            rospy.loginfo(f"레바콘 회피: Angle={leba_angle}, Speed={leba_speed}")
-            if lebacon_section_complete:
-                rospy.loginfo("✅ 레바콘 구간 완료 → MODE_AR_DRIVE")
-                controller.drive(0, 15)
-                rospy.sleep(0.5)
-                current_mode = MODE_AR_DRIVE
+            rospy.loginfo("현재 모드: MODE_LEBACON_AVOIDANCE (레바콘 회피 중 - HullClusterDriver 사용)")
+            
+            # ✅ Use HullClusterDriver for lane following during lebacon avoidance
+            # This assumes that the lane following will naturally guide the car
+            # around any visible lebacon or the lebacon detection is handled elsewhere.
+            lane_angle, lane_speed = hull_cluster_driver.vision_drive(current_image)
+            controller.drive(lane_angle, lane_speed)
+            rospy.loginfo(f"레바콘 회피 (HullClusterDriver): Angle={lane_angle}, Speed={lane_speed}")
 
-
-
-
+            # # The 'lebacon_section_complete' flag still needs to come from somewhere.
+            # # If SonicDriver still determines completion, keep the call.
+            # # Otherwise, you need to define how this mode completes (e.g., visual cue, time).
+            # # For now, let's keep the sonic_driver call just for the 'complete' flag.
+            # _, _, lebacon_section_complete = sonic_driver.get_drive_values() 
+            
+            # if lebacon_section_complete:
+            #     rospy.loginfo("✅ 레바콘 구간 완료 → MODE_AR_DRIVE")
+            #     controller.drive(0, 15) # Small forward to clear the cone area
+            #     rospy.sleep(0.5)
+            #     current_mode = MODE_AR_DRIVE
 
 
 
